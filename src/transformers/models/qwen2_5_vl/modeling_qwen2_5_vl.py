@@ -90,11 +90,19 @@ class Qwen2_5_VisionPatchEmbed(nn.Module):
         self.proj = nn.Conv3d(in_channels, embed_dim, kernel_size=kernel_size, stride=kernel_size, bias=False)
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        target_dtype = self.proj.weight.dtype
+        # 元の型を保存
+        orig_dtype = hidden_states.dtype
+        
+        # 一時的にfloat32に変換して計算精度を確保
+        hidden_states = hidden_states.to(torch.float32)
+        
         hidden_states = hidden_states.view(
             -1, self.in_channels, self.temporal_patch_size, self.patch_size, self.patch_size
         )
-        hidden_states = self.proj(hidden_states.to(dtype=target_dtype)).view(-1, self.embed_dim)
+        
+        # float32で計算を行い、結果を元の型に戻す
+        hidden_states = self.proj(hidden_states).view(-1, self.embed_dim).to(dtype=orig_dtype)
+        
         return hidden_states
 
 
